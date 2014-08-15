@@ -1,0 +1,12 @@
+# build artifacts
+bin/
+obj/
+
+# Eclipse workspace
+.metadata/
+
+# shortcuts
+*.lnk
+
+# Webstorm project
+.idea
