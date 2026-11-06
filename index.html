@@ -2,382 +2,237 @@
 <html lang="en">
 <head>
     <link rel="shortcut icon" href="five9.ico">
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <title>Five9 Agent Script Sample</title>
 
-    <!-- Latest compiled and minified Bootstrap CSS -->
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.css">
-
-    <!-- jQuery UI timepicker addon CSS -->
-    <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.4.5/jquery-ui-timepicker-addon.min.css">
-
-    <style type="text/css">
-        /* reduced navbar height */
-        .nav > li > a {
-            padding-top: 4px !important;
-            padding-bottom: 4px !important;
-        }
-
-        .navbar {
-            min-height: 30px !important;
-        }
-        /* panel padding for scroll bar */
-        .panel-default {
-            padding-right: 4px;
+    <style>
+        :root { color-scheme: light; font-family: "Segoe UI", sans-serif; color: #242b30; background: #f7f8fa; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-size: 14px; line-height: 1.5; }
+        [hidden] { display: none !important; }
+        .navbar { position: sticky; top: 0; z-index: 1; background: #fff; border-bottom: 1px solid #c8cdd2; }
+        .container-fluid { max-width: 960px; margin: auto; padding: 0 16px; }
+        .nav { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; padding: 0; margin: 0; }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        [role="tab"] { border: 0; border-bottom: 3px solid transparent; padding: 12px; background: transparent; color: #454e55; }
+        [role="tab"][aria-selected="true"] { color: #005c9e; border-bottom-color: #005c9e; }
+        :focus-visible { outline: 3px solid #0076c8; outline-offset: 3px; }
+        .panel-body { padding: 20px 0; }
+        .row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+        .col-xs-12 { width: 100%; }
+        .col-xs-6 { flex: 1 1 260px; min-width: 0; }
+        .col-xs-3 { flex: 1 1 120px; min-width: 0; }
+        .col-xs-8 { flex: 2 1 260px; min-width: 0; }
+        p { margin: 0 0 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; }
+        .form-control { width: 100%; min-height: 40px; padding: 8px; border: 1px solid #8e99a3; border-radius: 4px; background: #fff; color: inherit; }
+        .btn { min-height: 40px; padding: 8px 16px; border: 1px solid #005c9e; border-radius: 4px; background: #005c9e; color: #fff; }
+        button:disabled { opacity: .6; cursor: not-allowed; }
+        [role="status"] { display: block; margin-top: 12px; overflow-wrap: anywhere; }
+        [data-state="error"] { color: #a51c30; }
+        [data-state="success"] { color: #17693d; }
+        #tab-calldetail { overflow-wrap: anywhere; }
+        @media (max-width: 480px) {
+            .container-fluid { padding: 0 12px; }
+            [role="tab"] { padding: 10px 8px; }
         }
     </style>
 
-    <!-- jQuery -->
-    <script src="//code.jquery.com/jquery-1.11.1.min.js" type="text/javascript"></script>
-    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js" type="text/javascript"></script>
+    <script>
+        'use strict';
 
-    <!-- jQuery UI -->
-    <script src="//code.jquery.com/ui/1.11.2/jquery-ui.min.js" type="text/javascript"></script>
+        const F9domain = 'YourFive9Domain';
+        const F9list = 'Web2Campaign';
+        const contactFields = ['first_name', 'last_name', 'street', 'city', 'state', 'zip', 'number1', 'number2'];
 
-    <!-- jQuery UI timepicker addon -->
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.4.5/jquery-ui-timepicker-addon.js"
-            type="text/javascript"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.4.5/jquery-ui-sliderAccess.js"
-            type="text/javascript"></script>
+        function getVariable(id) {
+            const value = document.getElementById(id).textContent.trim();
+            return /^@[^@]+@$/.test(value) ? '' : value;
+        }
 
-    <!-- Latest compiled and minified Bootstrap JS -->
-    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.js"></script>
-
-    <script type="text/javascript">
-
-        // client specific configuration
-        var F9domain = 'YourFive9Domain'; // Five9 domain name
-        var F9list = 'Web2Campaign';     // Five9 calling list name
-
-        $.support.cors = true;
-
-        /**
-         * Handles body onload event
-         */
-        function onloadHandler() {
-            resizeHandler();
-
-            var d = new Date();
-            d.setMinutes(0,0,0);
-
-            // setup callback datetime picker
-            $('#callback_datetime').datetimepicker({
-                dateFormat: 'mm-dd-yy',
-                timeFormat: 'hh:mm TT z',
-                minDateTime: d,
-                hourMin: 8,
-                hourMax: 22,
-                stepHour: 1,
-                stepMinute: 5,
-                timezoneList: [
-                    // values are DST agnostic, adjusted to DST
-                    // by adjustForDST() prior to submission
-//                    { value: 'AT', label: 'Atlantic'},
-                    { value: 'ET', label: 'Eastern'},
-                    { value: 'CT', label: 'Central' },
-                    { value: 'MT', label: 'Mountain' },
-                    { value: 'PT', label: 'Pacific' }
-//                    { value: 'AKT', label: 'Alaska' },
-//                    { value: 'HAT', label: 'Hawaii' }
-                ],
-                onClose: function(text, picker) {
-                    console.log('callback_datetime: '+text);
+        function initialize() {
+            const tabs = [...document.querySelectorAll('[role="tab"]')];
+            function activateTab(tab) {
+                for (const candidate of tabs) {
+                    const selected = candidate === tab;
+                    candidate.setAttribute('aria-selected', String(selected));
+                    candidate.tabIndex = selected ? 0 : -1;
+                    document.getElementById(candidate.getAttribute('aria-controls')).hidden = !selected;
                 }
+            }
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => activateTab(tab));
+                tab.addEventListener('keydown', event => {
+                    const positions = { ArrowRight: (index + 1) % tabs.length, ArrowLeft: (index + tabs.length - 1) % tabs.length, Home: 0, End: tabs.length - 1 };
+                    if (!(event.key in positions)) return;
+                    event.preventDefault();
+                    const next = tabs[positions[event.key]];
+                    activateTab(next);
+                    next.focus();
+                });
             });
 
-            setTimeout(checkVariablePopulation, 500);
-        }
+            const loadedFields = new Set();
+            const editedFields = new Set();
+            for (const field of contactFields) {
+                document.getElementById(field).addEventListener('input', () => editedFields.add(field));
+            }
+            function updateCallState() {
+                if (!getVariable('callstarttimestamp')) return;
+                for (const field of contactFields) {
+                    const value = getVariable(`Customer.${field}`);
+                    if (value && !loadedFields.has(field) && !editedFields.has(field)) {
+                        document.getElementById(field).value = value;
+                        loadedFields.add(field);
+                    }
+                }
+                if (getVariable('callendtimestamp')) {
+                    const button = document.getElementById('submit_update');
+                    button.dataset.callEnded = 'true';
+                    button.disabled = true;
+                }
+            }
+            const observer = new MutationObserver(updateCallState);
+            for (const id of ['callstarttimestamp', 'callendtimestamp', ...contactFields.map(field => `Customer.${field}`)]) {
+                observer.observe(document.getElementById(id), { childList: true, characterData: true, subtree: true });
+            }
+            updateCallState();
 
-        /**
-         * Handles body resize to fix navbar padding
-         */
-        function resizeHandler() {
-            var h = $("#navbar").height()+'px';
-            $("#main-panel").css('padding-top', h);
-        }
-
-        /**
-         * Handles script variable initialization
-         */
-        function checkVariablePopulation() {
-            var csts = $("#callstarttimestamp").html();
-            var cets = $("#callendtimestamp").html();
-
-            if (csts != '@Call.start_timestamp@'
-                && cets != '@Call.end_timestamp@'
-                && csts <= cets) {
-                // variables populated, call ended
+            document.getElementById('contact-form').addEventListener('submit', event => {
+                event.preventDefault();
+                const contact = Object.fromEntries(contactFields.map(field => {
+                    const input = document.getElementById(field);
+                    input.value = input.value.trim();
+                    return [field, input.value];
+                }));
+                if (event.currentTarget.reportValidity()) {
+                    void doWeb2CampaignUpdate(contact, 'updatestatus', 'submit_update');
+                }
+            });
+            document.getElementById('callback-form').addEventListener('submit', event => {
+                event.preventDefault();
                 try {
-                    callEnded();
-                } catch (e) { }
-
-            } else if (csts != '@Call.start_timestamp@') {
-                // variables populated, call started
-                try {
-                    callStarted();
-                } catch (e) { }
-
-            } else {
-                // waiting on script variables to populate
-                setTimeout(checkVariablePopulation, 1000);
-            }
+                    const number1 = getVariable('Customer.number1');
+                    if (!/^[0-9]{10}$/.test(number1)) throw new Error('The call must have a primary phone number of exactly 10 digits.');
+                    const callback = formatCallback(document.getElementById('callback_datetime').value, document.getElementById('callback_timezone').value);
+                    void doWeb2CampaignUpdate({ number1, F9TimeToCall: callback, F9TimeFormat: 'MM-dd-yyyy HH:mm Z' }, 'callbackstatus', 'submit_callback');
+                } catch (error) {
+                    const status = document.getElementById('callbackstatus');
+                    status.dataset.state = 'error';
+                    status.textContent = error.message;
+                }
+            });
         }
 
-        /**
-         * Handler for call started
-         */
-        function callStarted() {
-            // load script fields on call started
-            $("#first_name").val($("#Customer\\.first_name").html());
-            $("#last_name").val($("#Customer\\.last_name").html());
-            $("#street").val($("#Customer\\.street").html());
-            $("#city").val($("#Customer\\.city").html());
-            $("#state").val($("#Customer\\.state").html());
-            $("#zip").val($("#Customer\\.zip").html());
-            $("#number1").val($("#Customer\\.number1").html());
-            $("#number2").val($("#Customer\\.number2").html());
-        }
-
-        /**
-         * Handler for call ended
-         */
-        function callEnded() {
-            // disable submit update button
-            $("#submit_update").prop("disabled", true);
-        }
-
-        /**
-         * Handles customer info submission
-         */
-        function doCrmUpdate() {
-            var contact = {};
-            // contact poperties names map directly to
-            // five9 contact field names
-            contact.first_name = $("#first_name").val();
-            contact.last_name = $("#last_name").val();
-            contact.street = $("#street").val();
-            contact.city = $("#city").val();
-            contact.state = $("#state").val();
-            contact.zip = $("#zip").val();
-            contact.number1 = $("#number1").val();
-            contact.number2 = $("#number2").val();
-
-            // do some input valildation
-            var error = undefined;
-            if (!/^[0-9]{10}$/.test(contact.number1)) {
-                error = 'Primary Phone must be exactly 10 numeric digits.';
-            } else if (contact.number2.length && !/^[0-9]{10}$/.test(contact.number2)) {
-                error = 'Alternate Phone must be exactly 10 numeric digits or empty.';
-            } else if (!contact.first_name.length) {
-                error = 'First Name must be provided.';
-            } else if (!contact.last_name.length) {
-                error = 'Last Name must be provided.';
-            } else if (!contact.city.length) {
-                error = 'City must be provided.';
-            } else if (!/^[a-zA-Z]{2}$/.test(contact.state)) {
-                error = 'State must be selected.';
-            } else if (contact.zip.length && !/^[0-9]{5}$/.test(contact.zip)) {
-                error = 'Zip must be exactly 5 numeric digits or empty.';
+        function formatCallback(value, timeZone) {
+            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Choose a callback date and time.');
+            const [date, time] = value.split('T');
+            const [year, month, day] = date.split('-');
+            const [hour, minute] = time.split(':').map(Number);
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+            });
+            const matches = [];
+            for (let offset = 4; offset <= 8; offset++) {
+                const instant = new Date(`${value}:00-${String(offset).padStart(2, '0')}:00`);
+                if (Number.isNaN(instant.getTime())) continue;
+                const parts = Object.fromEntries(formatter.formatToParts(instant).map(part => [part.type, part.value]));
+                if (`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}` === value) {
+                    matches.push({ instant, offset });
+                }
             }
-
-            if (error) {
-                var statusdiv = $("#updatestatus");
-                statusdiv.attr('style', 'color: red');
-                statusdiv.html(error);
-
-            } else {
-                // process web service update calls
-                doWeb2CampaignUpdate(contact);
+            if (matches.length !== 1) throw new Error('This time is invalid or ambiguous in the selected time zone. Choose another time.');
+            if (matches[0].instant.getTime() <= Date.now()) throw new Error('Callback time must be in the future.');
+            if (hour < 8 || hour > 22 || (hour === 22 && minute > 0) || minute % 5 !== 0) {
+                throw new Error('Choose a time from 08:00 to 22:00 in five-minute increments.');
             }
-        }
-
-        /**
-         * Handles customer callback submission
-         */
-        function doScheduleCallback() {
-            var contact = {};
-            // contact poperties names map directly to
-            // five9 contact field names
-            contact.number1 = $("#Customer\\.number1").html();
-            contact.F9TimeToCall = adjustForDST($("#callback_datetime").val());
-            contact.F9TimeFormat = 'MM-dd-yyyy HH:mm a z';
-
-            // do some input valildation
-            var error = undefined;
-            if (!/^[0-9]{10}$/.test(contact.number1)) {
-                error = 'Primary Phone must be exactly 10 numeric digits.';
-            } else if (!contact.F9TimeToCall.length) {
-                error = 'Callback Time must be provided.';
-            }
-
-            if (error) {
-                var statusdiv = $("#callbackstatus");
-                statusdiv.attr('style', 'color: red');
-                statusdiv.html(error);
-
-            } else {
-                // process web service update calls
-                doWeb2CampaignUpdate(contact);
-            }
+            return `${month}-${day}-${year} ${time} -${String(matches[0].offset).padStart(2, '0')}00`;
         }
 
         /**
          * Perform Five9 web2campaign contact update
          * @param contact
          */
-        function doWeb2CampaignUpdate(contact) {
-            var success = false;
-            var url = 'https://api.five9.com/web2campaign/AddToList?'
-                    + 'F9domain=' + F9domain
-                    + '&F9list=' + F9list
-                    + '&F9key=number1'
-                    + '&F9updateCRM=1';
+        async function doWeb2CampaignUpdate(contact, statusId, buttonId) {
+            const status = document.getElementById(statusId);
+            const button = document.getElementById(buttonId);
+            if (button.disabled) return;
 
-            for (var key in contact) {
-                // add all contact fields to the list update
-                if (!contact.hasOwnProperty(key)) continue;
-                url += '&' + key + '=' + contact[key];
-            }
+            button.disabled = true;
+            status.dataset.state = 'pending';
+            status.textContent = 'Submitting...';
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
-            var fnSuccess = function (data) {
-                var statusdiv = $("#updatestatus");
-                var response = $(data);
-
-                var f9errCode = parseInt(response.find("input[name=F9errCode]").val());
-                var f9errDesc = response.find("input[name=F9errDesc]").val();
-                success = (f9errCode == 0);
-
-                if (success) {
-                    statusdiv.attr('style', 'color: green');
-                    statusdiv.html(f9errDesc);
-
-                } else {
-                    statusdiv.attr('style', 'color: red');
-                    statusdiv.html('Update failed: (' + f9errCode + ') ' + f9errDesc);
+            try {
+                if (!F9domain || F9domain === 'YourFive9Domain' || !F9list) {
+                    throw new Error('Configure the Five9 domain and calling list before submitting.');
                 }
-            };
+                const url = new URL('https://api.five9.com/web2campaign/AddToList');
+                url.search = new URLSearchParams({
+                    F9domain,
+                    F9list,
+                    F9key: 'number1',
+                    F9updateCRM: '1',
+                    ...contact
+                }).toString();
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    cache: 'no-store',
+                    credentials: 'omit',
+                    referrerPolicy: 'no-referrer'
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            var fnError = function (jqXHR, status, error) {
-                var statusdiv = $("#updatestatus");
-                statusdiv.attr('style', 'color: red');
-                statusdiv.html('Update failed: ' + error);
-
-                success = false;
-            };
-
-            $.ajax({
-                type: 'GET',
-                url: url,
-                async: false,
-                dataType: 'html',
-                success: fnSuccess,
-                error: fnError
-            });
-
-            return success;
-        }
-
-        function setCookie(cname, cvalue, exdays) {
-            var cookie = cname + "=" + cvalue;
-            var expires = '';
-            if (!!exdays) {
-                var d = new Date();
-                d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-                expires = '; expires=' + d.toGMTString();
-            }
-            //noinspection JSValidateTypes
-            document.cookie = cookie + expires;
-        }
-
-        function getCookie(cname) {
-            var name = cname + "=";
-            var ca = document.cookie.split(';');
-            for (var i = 0; i < ca.length; i++) {
-                var c = ca[i].trim();
-                if (c.indexOf(name) == 0) {
-                    return c.substring(name.length, c.length);
+                const result = new DOMParser().parseFromString(await response.text(), 'text/html');
+                const code = result.querySelector('input[name="F9errCode"]')?.value;
+                const description = result.querySelector('input[name="F9errDesc"]')?.value;
+                if (!code || !/^-?\d+$/.test(code)) {
+                    throw new Error('Unexpected response from Five9.');
                 }
-            }
-            return '';
-        }
-
-        /**
-         * Adjusts a date string captured by datetimepicker
-         * for DST offset (i.e. CT -> CST/CDT)
-         *
-         * @param strdate The date string to adjust
-         */
-        function adjustForDST(strdate) {
-
-            var TZDATA = {
-                AT: { false: 'AST', true: 'ADT' },   // Atlantic
-                ET: { false: 'EST', true: 'EDT' },
-                CT: { false: 'CST', true: 'CDT' },
-                MT: { false: 'MST', true: 'MDT' },
-                PT: { false: 'PST', true: 'PDT' },
-                AKT: { false: 'AKST', true: 'AKDT' }, // Alaska
-                HAT: { false: 'HAST', true: 'HADT' }  // Hawaii
-            };
-
-            if (!!strdate) {
-                var match = /(.*?)([A-Z]+T)$/.exec(strdate);
-                if (!!match && match.length == 3) {
-                    var datetime = match[1];
-                    var timezone = match[2];
-
-                    var isdst = isDST(new Date(datetime));
-                    var tzstr = '';
-                    try {
-                        tzstr = TZDATA[timezone][isdst];
-                    } catch (e) {}
-
-                    return datetime+tzstr;
+                if (Number(code) !== 0) {
+                    throw new Error(`(${code}) ${description || 'Five9 rejected the update.'}`);
                 }
+                status.dataset.state = 'success';
+                status.textContent = description || 'Update submitted.';
+            } catch (error) {
+                status.dataset.state = 'error';
+                status.textContent = error.name === 'AbortError'
+                    ? 'Request timed out. Verify the result in Five9 before trying again.'
+                    : `Update failed: ${error.message}`;
+            } finally {
+                clearTimeout(timeout);
+                button.disabled = button.dataset.callEnded === 'true';
             }
-            return strdate;
         }
 
-        /**
-         * Returns true if the given date is within DST
-         *
-         * @param {Date} [date] The date to test for DST
-         */
-        function isDST(date) {
-            date = date || new Date();
-            if (typeof date == 'object' && 'getTimezoneOffset' in date) {
-                var jan = new Date(date.getFullYear(), 0, 1);
-                return date.getTimezoneOffset() != jan.getTimezoneOffset();
-            }
-            return false;
-        }
+        document.addEventListener('DOMContentLoaded', initialize);
     </script>
 </head>
 
-<body onload="onloadHandler();" onresize="resizeHandler();">
+<body>
     <!-- navbar -->
     <nav id="navbar" class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
-            <ul class="nav nav-tabs" data-tabs="tabs">
-                <li class="active"><a id="a-tab-script1" href="#tab-script1" data-toggle="tab">Contact Info</a></li>
-                <li><a id="a-tab-script2" href="#tab-script2" data-toggle="tab">Script</a></li>
-                <li><a id="a-tab-callback" href="#tab-callback" data-toggle="tab">Callback</a></li>
-                <li><a id="a-tab-calldetail" href="#tab-calldetail" data-toggle="tab">Call Detail</a></li>
+            <ul class="nav" role="tablist" aria-label="Agent script">
+                <li role="presentation"><button type="button" role="tab" id="a-tab-script1" aria-controls="tab-script1" aria-selected="true">Contact Info</button></li>
+                <li role="presentation"><button type="button" role="tab" id="a-tab-script2" aria-controls="tab-script2" aria-selected="false" tabindex="-1">Script</button></li>
+                <li role="presentation"><button type="button" role="tab" id="a-tab-callback" aria-controls="tab-callback" aria-selected="false" tabindex="-1">Callback</button></li>
+                <li role="presentation"><button type="button" role="tab" id="a-tab-calldetail" aria-controls="tab-calldetail" aria-selected="false" tabindex="-1">Call Detail</button></li>
             </ul>
         </div>
     </nav>
 
     <!-- main panel content -->
-    <div id="main-panel" class="container-fluid">
+    <main id="main-panel" class="container-fluid">
         <div id="tab-content" class="tab-content">
 
-            <div id="tab-script1" class="tab-pane active">
+            <div id="tab-script1" role="tabpanel" aria-labelledby="a-tab-script1" tabindex="0">
                 <div class="panel panel-default">
-                    <div class="panel-body">
+                    <form id="contact-form" class="panel-body">
                         <div class="row">
                             <div class="col-xs-12">
                                 <p>
@@ -392,27 +247,27 @@
                         <div class="row">
                             <div class="input-group-sm col-xs-6">
                                 <label for="first_name"><span style="color:red">*</span>First Name</label>
-                                <input type="text" id="first_name" class="form-control">
+                                <input type="text" id="first_name" name="first_name" autocomplete="given-name" required class="form-control">
                             </div>
                             <div class="input-group-sm col-xs-6">
                                 <label for="last_name"><span style="color:red">*</span>Last Name</label>
-                                <input type="text" id="last_name" class="form-control">
+                                <input type="text" id="last_name" name="last_name" autocomplete="family-name" required class="form-control">
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-group-sm col-xs-12">
                                 <label for="street">Street</label>
-                                <input type="text" id="street" class="form-control" size="45">
+                                <input type="text" id="street" name="street" autocomplete="street-address" class="form-control" size="45">
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-group-sm col-xs-6">
                                 <label for="city"><span style="color:red">*</span>City</label>
-                                <input type="text" id="city" class="form-control">
+                                <input type="text" id="city" name="city" autocomplete="address-level2" required class="form-control">
                             </div>
                             <div class="input-group-sm col-xs-3">
                                 <label for="state"><span style="color:red">*</span>State</label>
-                                <select id="state" class="form-control">
+                                <select id="state" name="state" autocomplete="address-level1" required class="form-control">
                                     <option value=""></option>
                                     <option value="AL">AL</option>
                                     <option value="AK">AK</option>
@@ -438,7 +293,7 @@
                                     <option value="MA">MA</option>
                                     <option value="MI">MI</option>
                                     <option value="MN">MN</option>
-                                    <option value="MS">MI</option>
+                                    <option value="MS">MS</option>
                                     <option value="MO">MO</option>
                                     <option value="MT">MT</option>
                                     <option value="NE">NE</option>
@@ -459,7 +314,7 @@
                                     <option value="TN">TN</option>
                                     <option value="TX">TX</option>
                                     <option value="UT">UT</option>
-                                    <option value="VT">VE</option>
+                                    <option value="VT">VT</option>
                                     <option value="VA">VA</option>
                                     <option value="WA">WA</option>
                                     <option value="WV">WV</option>
@@ -469,41 +324,40 @@
                             </div>
                             <div class="input-group-sm col-xs-3">
                                     <label for="zip">Zip</label>
-                                    <input type="text" id="zip" class="form-control" size="7" maxlength="5">
+                                    <input type="text" id="zip" name="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}" title="Five numeric digits" class="form-control" size="7" maxlength="5">
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-group-sm col-xs-6">
                                 <label for="number1"><span style="color: red">*</span>Primary Phone</label>
-                                <input type="text" id="number1" class="form-control" size="12" maxlength="10">
+                                <input type="tel" id="number1" name="number1" autocomplete="tel-national" inputmode="numeric" pattern="[0-9]{10}" title="Ten numeric digits" required class="form-control" size="12" maxlength="10">
                             </div>
                             <div class="input-group-sm col-xs-6">
                                 <label for="number2">Alternate Phone</label>
-                                <input type="text" id="number2" class="form-control" size="12" maxlength="10">
+                                <input type="tel" id="number2" name="number2" autocomplete="off" inputmode="numeric" pattern="[0-9]{10}" title="Ten numeric digits or empty" class="form-control" size="12" maxlength="10">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-xs-3">
                                 <br>
-                                <button type="button" id="submit_update" class="btn btn-primary"
-                                    onclick="doCrmUpdate();">Submit Update</button>
+                                <button type="submit" id="submit_update" class="btn btn-primary">Submit Update</button>
                             </div>
                             <div class="col-xs-8 pull-right">
-                                <span id="updatestatus"></span>
+                                <span id="updatestatus" role="status" aria-live="polite"></span>
                             </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <div id="tab-script2" class="tab-pane">
+            <div id="tab-script2" role="tabpanel" aria-labelledby="a-tab-script2" tabindex="0" hidden>
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <!-- BEGIN Script HTML goes here BEGIN -->
                         <div class="row">
                             <div class="col-xs-12">
                                 <p>
-                                    Additional script verbage goes here. Additional script verbage goes here.
+                                    Additional script content goes here.
                                 </p>
                             </div>
                         </div>
@@ -512,34 +366,41 @@
                 </div>
             </div>
 
-            <div id="tab-callback" class="tab-pane">
+            <div id="tab-callback" role="tabpanel" aria-labelledby="a-tab-callback" tabindex="0" hidden>
                 <div class="panel panel-default">
-                    <div class="panel-body">
+                    <form id="callback-form" class="panel-body">
 
                         <div class="row">
                             <div class="input-group-sm col-xs-6">
                                 <label for="callback_datetime">Callback Time</label>
-                                <input type="text" id="callback_datetime" readonly="true" class="form-control"
-                                    placeholder="Click to select time...">
+                                <input type="datetime-local" id="callback_datetime" name="callback_datetime" required step="300" class="form-control">
+                            </div>
+                            <div class="input-group-sm col-xs-6">
+                                <label for="callback_timezone">Time Zone</label>
+                                <select id="callback_timezone" name="callback_timezone" class="form-control">
+                                    <option value="America/New_York">Eastern</option>
+                                    <option value="America/Chicago">Central</option>
+                                    <option value="America/Denver">Mountain</option>
+                                    <option value="America/Los_Angeles">Pacific</option>
+                                </select>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-xs-3">
                                 <br>
-                                <button type="button" id="submit_callback" class="btn btn-primary"
-                                        onclick="doScheduleCallback();">Schedule Callback</button>
+                                <button type="submit" id="submit_callback" class="btn btn-primary">Schedule Callback</button>
                             </div>
                             <div class="col-xs-8 pull-right">
-                                <span id="callbackstatus"></span>
+                                <span id="callbackstatus" role="status" aria-live="polite"></span>
                             </div>
                         </div>
 
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <div id="tab-calldetail" class="tab-pane">
+            <div id="tab-calldetail" role="tabpanel" aria-labelledby="a-tab-calldetail" tabindex="0" hidden>
                 <div class="panel panel-default">
                     <div class="panel-body" style="font-size: 0.85em">
                         <!-- Five9 Call Variables -->
@@ -598,10 +459,10 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- do not modify, used for call variable initialization -->
-    <span id="callstarttimestamp" style="display:none">@Call.start_timestamp@</span>
-    <span id="callendtimestamp" style="display:none">@Call.end_timestamp@</span>
+    <span id="callstarttimestamp" hidden>@Call.start_timestamp@</span>
+    <span id="callendtimestamp" hidden>@Call.end_timestamp@</span>
 </body>
 </html>
